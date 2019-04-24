@@ -1,4 +1,6 @@
 ---
+
+
 - name: Add Elasticsearch GPG key.
   rpm_key:
     key: https://artifacts.elastic.co/GPG-KEY-elasticsearch
@@ -14,3 +16,12 @@
   package:
     name: logstash
     state: present
+
+- name: Check if Logstash initscript installer state file exists
+  stat: path="/etc/logstash/{{ ansible_service_mgr }}"
+  register: logstash_initscript
+
+- name: create initscript if it doesnt exist
+  shell: "/usr/share/logstash/bin/system-install /etc/logstash/startup.options {{ ansible_service_mgr }} && touch /etc/logstash/{{ ansible_service_mgr }}"
+  when: logstash_initscript.stat.exists == false
+

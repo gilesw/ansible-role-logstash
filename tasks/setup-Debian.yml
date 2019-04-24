@@ -14,18 +14,31 @@
     repo: 'deb https://artifacts.elastic.co/packages/{{ logstash_version }}/apt stable main'
     state: present
 
-- name: Check if Logstash is already installed.
-  stat: path=/etc/init.d/logstash
-  register: logstash_installed
+- name: Check if Logstash initscript exists
+  stat: path="/etc/logstash/{{ ansible_service_mgr }}"
+  register: logstash_initscript
 
 - name: Update apt cache if repository just added.
   apt: update_cache=yes
-  when: logstash_installed.stat.exists == false
+  when: logstash_initscript.stat.exists == false
 
 - name: Install Logstash.
   apt:
     name: logstash
     state: present
+
+- name: create initscript if it doesnt exist
+  shell: "/usr/share/logstash/bin/system-install /etc/logstash/startup.options {{ ansible_service_mgr }} && touch /etc/logstash/{{ ansible_service_mgr }}"
+  when: logstash_initscript.stat.exists == false
+
+- name: symlink old sysv init script
+  file:
+    src: /lib/init/upstart-job
+    dest: /etc/init.d/logstash
+    owner: root
+    group: root
+    state: link
+  when: ansible_service_mgr == 'upstart'
 
 - name: Add Logstash user to adm group (Debian).
   user:

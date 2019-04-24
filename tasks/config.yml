@@ -1,4 +1,5 @@
 ---
+
 - name: Create Logstash configuration files.
   template:
     src: "{{ item }}.j2"
@@ -6,10 +7,9 @@
     owner: root
     group: root
     mode: 0644
-  with_items:
-    - 01-beats-input.conf
-    - 30-elasticsearch-output.conf
+  with_items: "{{ logstash_config }}"
   notify: restart logstash
+  when: logstash_install_input_output
 
 - name: Create Logstash filters.
   copy:
@@ -18,13 +18,9 @@
     owner: root
     group: root
     mode: 0644
-  with_items:
-    - 10-syslog.conf
-    - 11-nginx.conf
-    - 12-apache.conf
-    - 14-solr.conf
-    - 15-drupal.conf
+  with_items: "{{ logstash_filters }}"
   notify: restart logstash
+  when: logstash_install_filters
 
 - name: Create Logstash configuration file for local syslog.
   template:
@@ -42,3 +38,16 @@
     state: absent
   when: not logstash_monitor_local_syslog
   notify: restart logstash
+
+- name: Configure jvm options
+  template:
+    src: jvm.options.j2
+    dest: /etc/logstash/jvm.options
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart logstash
+
+
+
+

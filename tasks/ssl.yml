@@ -1,9 +1,19 @@
 ---
+- name: stat keyfile to check if we need generate a self signed key
+  stat: path="{{ logstash_ssl_dir }}/{{ logstash_ssl_key_file | basename }}"
+  register: logstash_key_file_stat
+  when: logstash_generate_self_signed_cert
+
+- name: create self-signed SSL cert
+  command: openssl req  -subj "/C=UK/ST=Sussex/O=Wibble/CN=localhost" \ -x509 -batch -nodes -days 36500 -newkey rsa:2048 -keyout /var/tmp/logstash.key -out /var/tmp/logstash.crt
+  when: logstash_generate_self_signed_cert and logstash_key_file_stat.stat.exists == False
+  delegate_to: 127.0.0.1
+
 - name: Ensure Logstash SSL key pair directory exists.
   file:
     path: "{{ logstash_ssl_dir }}"
     state: directory
-  when: logstash_ssl_key_file
+  when: logstash_ssl_key_file is defined
 
 - name: Copy SSL key and cert for logstash-forwarder.
   copy:
@@ -14,4 +24,4 @@
     - "{{ logstash_ssl_key_file }}"
     - "{{ logstash_ssl_certificate_file }}"
   notify: restart logstash
-  when: logstash_ssl_key_file
+  when: logstash_ssl_key_file is defined
